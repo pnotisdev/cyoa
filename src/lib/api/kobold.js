@@ -72,17 +72,22 @@ export async function generateResponseStream(prompt) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let result = '';
-    let done = false;
 
-    while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-            const chunk = decoder.decode(value, { stream: true });
-            result += chunk;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+            if (line.trim().startsWith('data:')) {
+                const json = line.trim().substring(5);
+                const data = JSON.parse(json);
+                if (data.token) {
+                    result += data.token;
+                }
+            }
         }
     }
 
-    console.log('Streaming complete');
     return result;
 }

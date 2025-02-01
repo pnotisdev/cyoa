@@ -57,33 +57,23 @@
         try {
             const conversationHistory = $messages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
             const prompt = `${character.name}, ${character.description}\n${conversationHistory}\nUser: ${userInput}\n${character.name}:`;
-            const responseStream = await generateResponseStream(prompt);
-            
-            console.log('Raw response:', responseStream); // Log the raw response
 
-            let accumulatedResponse = '';
-            const reader = responseStream.getReader();
-            const decoder = new TextDecoder();
+            const response = await generateResponseStream(prompt);
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                accumulatedResponse += decoder.decode(value, { stream: true });
-            }
-
-            console.log('Accumulated response:', accumulatedResponse); // Log the accumulated response
+            console.log('Full response:', response); // Log the full response
 
             // Check if the response contains the expected delimiter
-            const splitResponse = accumulatedResponse.split(`${character.name}:`);
+            const splitResponse = response.split(`${character.name}:`);
             if (splitResponse.length > 1) {
                 const characterResponse = splitResponse[1].trim();
                 addMessage(character.name, characterResponse);
             } else {
                 // Handle the case where the response does not contain the expected delimiter
-                const fallbackResponse = accumulatedResponse.split('Output:')[1]?.trim();
+                const fallbackResponse = response.split('Output:')[1]?.trim();
                 if (fallbackResponse) {
                     addMessage(character.name, fallbackResponse);
                 } else {
+                    addMessage('system', 'Received response: ' + response); // Log the unexpected response
                     throw new Error('Unexpected response format');
                 }
             }
